@@ -19,24 +19,25 @@ gen.data.frame(expr, ...)
 Expected structure of \code{expr}:
  \itemize{
    \item For \code{gen.list} it may have arbitrary structure (including a list).
-   \item For \code{gen.vector} a scalar (i.e., a numeric value of length 1) is expected.
+   \item For \code{gen.vector} a value (i.e., a vector of length 1) is expected.
    \item For \code{gen.data.frame} a (named) vector or list is expected which describes one row of the data frame.
-     Default names 'V1', 'V2', ... are used, if no names are given.
   }
   Within \code{expr} it is allowed to use functions and predefined constants from the parent environment.}
 
 \item{...}{Arbitrary many variable ranges and conditions.
 For all free variables occurring in \code{expr} a range must be assigned, e.g., \code{x = 1:3, y = 1:5} for an expression \code{x + y}. 
 At least one variable range is required.
-The ranges may depend on each other, e.g., \code{x = 1:3, y = x:3} is allowed.
+The ranges may depend on each other, e.g., \code{x = 1:3, y = x:3} or a substitution like \code{x = 1:3, y = 2 * x} is allowed.
 The generated values can be further restricted by conditions (like \code{x <= y}).}
 }
 \value{
-The result of \code{gen.list} is a list (a numeric vector for \code{gen.vector}) containing an entry for each combination of the free variables (i.e., the Cartesian product), where all the free variables in \code{expr} are substituted.
-The function \code{gen.vector} returns a numeric vector while \code{gen.list} can contain not only numeric values but also more complex substructures (like vectors or lists).
+The result of \code{gen.list} is a list (a vector for \code{gen.vector}) containing an entry for each combination of the free variables (i.e., the Cartesian product), where all the free variables in \code{expr} are substituted.
+The function \code{gen.vector} returns a vector while \code{gen.list} may contain also more complex substructures (like vectors or lists).
 
 The output of \code{gen.data.frame} is a data frame where each substituted \code{expr} entry is one row.
-The base expression \code{expr} should contain a vector or list (a named vector/list if the columns shall be named), such that each entry of this vector becomes a column of the returned data frame.
+The base expression \code{expr} should contain a (named) vector or list, such that each entry of this vector becomes a column of the returned data frame.
+If the vector contains a single literal without a name, this is taken as column name. For instance, \code{gen.data.frame(a, a = 1:5)} returns the same as \code{gen.data.frame(c(a = a), a = 1:5)}.
+Default names 'V1', 'V2', ... are used, if no names are given and names can't be automatically detected.
 
 All expressions and conditions are applied to each combination of the free variables separately, i.e., they are applied row-wise and not vector-wise. 
 For instance, the term \code{sum(x,y)} (within \code{expr} or a condition) is equivalent to \code{x+y}.
@@ -53,6 +54,13 @@ There are several syntactic features to be used in variable ranges, conditions, 
 A range for a variable ending with an underscore (like \code{x_}) defines a set of ranges affecting all variables named \code{{varname}_{index}}, e.g. \code{x_1}.
 For instance, in \code{gen.vector(x_1 + x_2 + x_3, x_ = 1:5)} the variables \code{x_1, x_2, x_3} are all ranging in \code{1:5}.
 This can be overwritten for each single \code{x_i}, e.g., an additional argument \code{x_3 = 1:3} assigns the range \code{1:3} to \code{x_3} while \code{x_1} and \code{x_2} keep the range \code{1:5}.
+A group of indexed variables is kept always sorted according to the position of the main variable \code{{varname}_}. 
+For instance, the two following statements produce the same results:
+  
+\itemize{
+  \item \code{gen.vector(x_1 + x_2 + a, x_ = 1:5, a = 1:2, x_1 = 1:2)}
+  \item \code{gen.vector(x_1 + x_2 + a, x_1 = 1:2, x_2 = 1:5, a = 1:2)}
+}
 
 Expressions and conditions support a \code{...}-notation which works as follows:
 
@@ -73,15 +81,16 @@ The conditions may contain itself list comprehension expressions, e.g., \code{\l
 # Compose 10, 11, 20, 21, 22, 30, ..., 33, ..., 90, ..., 99 into a vector
 gen.vector(x * 10 + y, x = 1:9, y = 1:x)
 
-# A data frame of all tuples (a_1, a_2, a_3) of whole positive numbers, summing up to 10
-gen.data.frame(c(a_1 = x_1, ..., a_3 = x_3), x_ = 1:10, x_1 + ... + x_3 == 10)
+# A list containing vectors [1], [1, 2], [1, 2, 3], ...
+gen.list(gen.vector(i, i = 1:n), n = 1:10)
 
-# A data.frame containing the numbers in 2:20 and the sum of their divisors
-gen.data.frame(c(num = a, sumdiv = sum(gen.vector(x, x = 1:(a-1), a \%\% x == 0))), 
-               a = 2:20)
+# A data frame of tuples (x_1, x_2, x_3) summing up to 10
+gen.data.frame(c(x_1, ..., x_3), x_ = 1:10, x_1 + ... + x_3 == 10)
 
-# Return perfect numbers between 2 and 100 (number equals the sum of divisors)
-gen.vector(a, a = 2:100, a == sum(gen.vector(x, x = 1:(a-1), a \%\% x == 0)))
+# A data.frame containing the numbers in 2:20, the sum of their divisors
+# and a flag if they are "perfect" (sum of divisors equals the number)
+gen.data.frame(c(n, sumdiv, perfect = (n == sumdiv)), n = 2:20, 
+               sumdiv = sum(gen.vector(x, x = 1:(n-1), n \%\% x == 0)))
 
 }
 \seealso{

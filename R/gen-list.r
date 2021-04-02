@@ -14,24 +14,25 @@
 #' Expected structure of \code{expr}:
 #'  \itemize{
 #'    \item For \code{gen.list} it may have arbitrary structure (including a list).
-#'    \item For \code{gen.vector} a scalar (i.e., a numeric value of length 1) is expected.
+#'    \item For \code{gen.vector} a value (i.e., a vector of length 1) is expected.
 #'    \item For \code{gen.data.frame} a (named) vector or list is expected which describes one row of the data frame.
-#'      Default names 'V1', 'V2', ... are used, if no names are given.
 #'   }
 #'   Within \code{expr} it is allowed to use functions and predefined constants from the parent environment.
 #' @param ... Arbitrary many variable ranges and conditions.
 #'   For all free variables occurring in \code{expr} a range must be assigned, e.g., \code{x = 1:3, y = 1:5} for an expression \code{x + y}. 
 #'   At least one variable range is required.
-#'   The ranges may depend on each other, e.g., \code{x = 1:3, y = x:3} is allowed.
+#'   The ranges may depend on each other, e.g., \code{x = 1:3, y = x:3} or a substitution like \code{x = 1:3, y = 2 * x} is allowed.
 #'   The generated values can be further restricted by conditions (like \code{x <= y}).
 #' 
 #' @return 
 #' 
-#' The result of \code{gen.list} is a list (a numeric vector for \code{gen.vector}) containing an entry for each combination of the free variables (i.e., the Cartesian product), where all the free variables in \code{expr} are substituted.
-#' The function \code{gen.vector} returns a numeric vector while \code{gen.list} can contain not only numeric values but also more complex substructures (like vectors or lists).
+#' The result of \code{gen.list} is a list (a vector for \code{gen.vector}) containing an entry for each combination of the free variables (i.e., the Cartesian product), where all the free variables in \code{expr} are substituted.
+#' The function \code{gen.vector} returns a vector while \code{gen.list} may contain also more complex substructures (like vectors or lists).
 #' 
 #' The output of \code{gen.data.frame} is a data frame where each substituted \code{expr} entry is one row.
-#' The base expression \code{expr} should contain a vector or list (a named vector/list if the columns shall be named), such that each entry of this vector becomes a column of the returned data frame.
+#' The base expression \code{expr} should contain a (named) vector or list, such that each entry of this vector becomes a column of the returned data frame.
+#' If the vector contains a single literal without a name, this is taken as column name. For instance, \code{gen.data.frame(a, a = 1:5)} returns the same as \code{gen.data.frame(c(a = a), a = 1:5)}.
+#' Default names 'V1', 'V2', ... are used, if no names are given and names can't be automatically detected.
 #' 
 #' All expressions and conditions are applied to each combination of the free variables separately, i.e., they are applied row-wise and not vector-wise. 
 #' For instance, the term \code{sum(x,y)} (within \code{expr} or a condition) is equivalent to \code{x+y}.
@@ -43,6 +44,13 @@
 #' A range for a variable ending with an underscore (like \code{x_}) defines a set of ranges affecting all variables named \code{{varname}_{index}}, e.g. \code{x_1}.
 #' For instance, in \code{gen.vector(x_1 + x_2 + x_3, x_ = 1:5)} the variables \code{x_1, x_2, x_3} are all ranging in \code{1:5}.
 #' This can be overwritten for each single \code{x_i}, e.g., an additional argument \code{x_3 = 1:3} assigns the range \code{1:3} to \code{x_3} while \code{x_1} and \code{x_2} keep the range \code{1:5}.
+#' A group of indexed variables is kept always sorted according to the position of the main variable \code{{varname}_}. 
+#' For instance, the two following statements produce the same results:
+#'   
+#' \itemize{
+#'   \item \code{gen.vector(x_1 + x_2 + a, x_ = 1:5, a = 1:2, x_1 = 1:2)}
+#'   \item \code{gen.vector(x_1 + x_2 + a, x_1 = 1:2, x_2 = 1:5, a = 1:2)}
+#' }
 #' 
 #' Expressions and conditions support a \code{...}-notation which works as follows:
 #' 
@@ -67,15 +75,16 @@
 #' # Compose 10, 11, 20, 21, 22, 30, ..., 33, ..., 90, ..., 99 into a vector
 #' gen.vector(x * 10 + y, x = 1:9, y = 1:x)
 #' 
-#' # A data frame of all tuples (a_1, a_2, a_3) of whole positive numbers, summing up to 10
-#' gen.data.frame(c(a_1 = x_1, ..., a_3 = x_3), x_ = 1:10, x_1 + ... + x_3 == 10)
+#' # A list containing vectors [1], [1, 2], [1, 2, 3], ...
+#' gen.list(gen.vector(i, i = 1:n), n = 1:10)
 #' 
-#' # A data.frame containing the numbers in 2:20 and the sum of their divisors
-#' gen.data.frame(c(num = a, sumdiv = sum(gen.vector(x, x = 1:(a-1), a %% x == 0))), 
-#'                a = 2:20)
+#' # A data frame of tuples (x_1, x_2, x_3) summing up to 10
+#' gen.data.frame(c(x_1, ..., x_3), x_ = 1:10, x_1 + ... + x_3 == 10)
 #' 
-#' # Return perfect numbers between 2 and 100 (number equals the sum of divisors)
-#' gen.vector(a, a = 2:100, a == sum(gen.vector(x, x = 1:(a-1), a %% x == 0)))
+#' # A data.frame containing the numbers in 2:20, the sum of their divisors
+#' # and a flag if they are "perfect" (sum of divisors equals the number)
+#' gen.data.frame(c(n, sumdiv, perfect = (n == sumdiv)), n = 2:20, 
+#'                sumdiv = sum(gen.vector(x, x = 1:(n-1), n %% x == 0)))
 #' 
 #' @export
 gen.list <- function(expr, ...) {
@@ -110,7 +119,7 @@ gen.data.frame <- function(expr, ...) {
 #' 
 #' @name gen.list.char
 #' 
-#' @param str A character pattern, containing expressions to be evaluated in \code{\{\}}-brackets. 
+#' @param str A character, containing expressions to be evaluated in \code{\{\}}-brackets, e.g., \code{"a{x}"} is transformed into \code{"a1"} for \code{x = 1}. 
 #'   Double brackets are transformed into a single bracket without evaluating the inner expression.
 #'   For instance, \code{"var{x + 1}_{{a}}"} is transformed into \code{"var2_{a}"} for \code{x = 1}.
 #' @param expr A base expression containing free variables which is evaluated for all combinations of variables. 
@@ -294,7 +303,8 @@ gen.logical.and <- function(expr, ...) {
   return(gen_logical_internal(expr, l, TRUE, parent.frame()))
 }
 
-#' @rdname gen.logical.and 
+#' @rdname gen.logical.and
+#' @export
 gen.logical.or <- function(expr, ...) {
   expr <- substitute(expr)
   l <- substitute(list(...))
@@ -496,9 +506,47 @@ expand_expr <- function(expr, vars, ctx) {
   return(list(expr, vars))
 }
 
+# add default names, e.g. convert quote(c(a = 1, b)) to quote(c(a = 1, b = 2))
+insert_names <- function(expr) {
+  if (is.symbol(expr)) { # single symbol
+    new_expr <- quote(c(X = X))
+    names(new_expr)[2] <- as.character(expr)
+    new_expr[2][[1]] <- expr
+    return(new_expr)
+  }
+  if (length(expr) <= 1 || (expr[[1]] != quote(c) && expr[[1]] != quote(list))) return(expr) # nothing to detect
+  if (length(names(expr)) == length(expr) && sum(names(expr) == "") == 1) return(expr) # all names set
+  
+  # already set names
+  res_names <- names(expr)
+  if (is.null(res_names)) res_names <- rep("", length(expr))
+  
+  # derive names from expr: accept only something like "a", not "1" (would be converted to "X1")
+  # ensure that set names are persisted, quote(a = 1, a) stays at it is (final columns "a" and "V2" are intended)
+  tmp_names <- as.character(expr)
+  tmp_names[res_names != ""] <- res_names[res_names != ""]
+  tmp_names[tmp_names != make.names(tmp_names, TRUE)] <- ""
+  tmp_names[1] <- ""
+  
+  # fill unset names
+  res_names[res_names == ""] <- tmp_names[res_names == ""]
+  names(expr) <- res_names
+  return(expr)
+}
+
 # ----- Variable range, conditions and Cartesian product -------
 
+# apply expr to Cartesian product, independent of return type (e.g. char or num)
+apply_to_cartesian <- function(expr, cartesian_df, parent_frame) {
+  rv <- eval(expr, cartesian_df[1,,drop=FALSE], parent_frame)
+  if (nrow(cartesian_df) > 1) {
+    rv <- c(rv, vapply(2:nrow(cartesian_df), function(i) eval(expr, cartesian_df[i,,drop=FALSE], parent_frame), rv))
+  }
+  return(rv)
+}
+
 # prepare variable limits for Cartesian product. turns "x=1:n, y=x:m" into "x=1:n,y=1:m, y>=x"
+# allow substitutions like "x=1:n, y=2*x"
 adjust_limits <- function(vars, parent_frame) {
   
   if (length(vars) == 0) return(list(list(), list()))
@@ -531,6 +579,7 @@ adjust_limits <- function(vars, parent_frame) {
   
   varnames <- names(vars)
   additional_conditions <- list()
+  sub_vars <- list()
   final_vars <- list()
   fixed_vals <- list()
   starts <- list()
@@ -542,7 +591,7 @@ adjust_limits <- function(vars, parent_frame) {
     
     show_err <- function(detail_err) {
       stop(paste0("could not evaluate variable range of '", varname, "', got '", as.character(as.expression(expr)), 
-                  "', expected something like start_expr:end_expr, ", detail_err), call. = FALSE)
+                  "', ", detail_err), call. = FALSE)
     }
     
     # returns NULL if it cannot be evaluated yet
@@ -552,19 +601,19 @@ adjust_limits <- function(vars, parent_frame) {
         fixed_vals[[varname]] <- evaled_expr
         final_vars[[varname]] <- evaled_expr
         varnames <- setdiff(varnames, varname) # can be savely evaluated now!
-      } else if (length(evaled_expr) > 1 && is.numeric(evaled_expr)) {
-        # check for i=start:end (valid for start/stop)
-        # evaluation in baseenv suffices, as operands are already evaluated!
-        range_expr <- create_range_expr(evaled_expr[1], evaled_expr[length(evaled_expr)])
-        if (identical(eval(range_expr, baseenv()), evaled_expr)) {
-          # don't accept i=3:1 (== [3,2,1]), then j=i:2 could not be transformed to conditions. accept seq(1,5,2) (== [1,3,5])
-          starts[varname] <- evaled_expr[1]
-          stops[varname] <- evaled_expr[length(evaled_expr)]
+      } else {
+        if (is.numeric(evaled_expr)) {
+          # check for i=start:end (valid for start/stop)
+          # evaluation in baseenv suffices, as operands are already evaluated!
+          range_expr <- create_range_expr(evaled_expr[1], evaled_expr[length(evaled_expr)])
+          if (identical(eval(range_expr, baseenv()), evaled_expr)) {
+            # don't accept i=3:1 (== [3,2,1]), then j=i:2 could not be transformed to conditions. accept seq(1,5,2) (== [1,3,5])
+            starts[varname] <- evaled_expr[1]
+            stops[varname] <- evaled_expr[length(evaled_expr)]
+          }
         }
         final_vars[[varname]] <- expr # don't replace expression by 1:n
-      } else {
-        show_err('did not find numeric vector')
-      }
+      } 
     } else if (length(expr) == 3 && expr[[1]] == quote(`:`)) {
       # do not replace in seq(...), step distance 2 can't be translated in conditions for cartesian product
       # no var range found yet, assume that the expression contains free vars
@@ -596,36 +645,60 @@ adjust_limits <- function(vars, parent_frame) {
       stops[varname]  <- evaled_stop_expr
       final_vars[[varname]] <- create_range_expr(evaled_start_expr, evaled_stop_expr)
     } else {
-      show_err("did not find ':' operator")
+      # assume a substitution
+      sub_vars[varname] <- as.expression(expr)
     }
   }
-  return(list(final_vars, additional_conditions))
+  return(list(final_vars, additional_conditions, sub_vars))
 }
 
 get_cartesian_df_after_expansion <- function(vars_lst, cond_lst, parent_frame) {
   
-  # remove generic matching free vars
-  vars_lst <- vars_lst[which(substr(names(vars_lst), nchar(names(vars_lst)), nchar(names(vars_lst))) != '_')]
+  # sort (x_, a, b, x_1, x_2) to (x_1, x_2, a, b), i.e., the "x_" variable defines the position
+  # and the generic matching free vars like "x_" are removed
+  while (TRUE) {
+    # pick one generic (like "x_") if existing
+    inds <- which(substr(names(vars_lst), nchar(names(vars_lst)), nchar(names(vars_lst))) == '_')
+    if (length(inds) == 0) break
+    cur_ind <- inds[1]
+    generic_name <- names(vars_lst)[cur_ind]
+    # preserve all others left/right of it, sort the generics
+    ind_no_generic <- which(substr(names(vars_lst), 1, nchar(generic_name)) != generic_name)
+    ind_no_generic_left  <- ind_no_generic[ind_no_generic < cur_ind]
+    ind_no_generic_right <- ind_no_generic[ind_no_generic > cur_ind]
+    generic_vars <- vars_lst[setdiff(which(substr(names(vars_lst), 1, nchar(generic_name)) == generic_name), cur_ind)]
+    vars_lst <- c(vars_lst[ind_no_generic_left], generic_vars[sort(names(generic_vars))], vars_lst[ind_no_generic_right])
+  }
   
   # adjust the limits (x = a:b, y = x:c) to (x = a:b, y = a:b, y <= x)
   res <- adjust_limits(vars_lst, parent_frame)
   vars_lst <- res[[1]]
   extra_conditions <- res[[2]]
+  sub_vars <- res[[3]]
   
-  vars_lst <- vars_lst[sort(names(vars_lst))]
+  vars_lst[["stringsAsFactors"]] <- FALSE # for non-numeric vars
 
   # Cartesian product of free vars via expand.grid
   cartesian_df <- do.call(expand.grid, vars_lst, envir = parent_frame)
   
-  # Non vector-wise applier of a single condition
-  applier <- function(expr) {
-    vapply(1:nrow(cartesian_df), function(i) eval(expr, cartesian_df[i,,drop=FALSE], parent_frame), TRUE)
+  # quick exit?
+  if (nrow(cartesian_df) == 0) return(cartesian_df)
+  
+  # apply substitutions first
+  if (length(sub_vars) >= 1) {
+    for (i in 1:length(sub_vars)) {
+      cartesian_df[names(sub_vars)[i]] <- apply_to_cartesian(sub_vars[[i]], cartesian_df, parent_frame)
+    }
   }
   
   # Apply all conditions (given conditions + from adjusted limits), and-connect them
   lst_args <- c(cond_lst, extra_conditions)
   if (length(lst_args) > 0) {
-    cartesian_df <- cartesian_df[Reduce("&", lapply(lst_args, applier), TRUE),,drop = FALSE]
+    # Non-vector-wise applier of a single condition
+    condition_applier <- function(expr) {
+      vapply(1:nrow(cartesian_df), function(i) eval(expr, cartesian_df[i,,drop=FALSE], parent_frame), TRUE)
+    }
+    cartesian_df <- cartesian_df[Reduce("&", lapply(lst_args, condition_applier), TRUE),,drop = FALSE]
   }
   
   return(cartesian_df) 
@@ -866,9 +939,11 @@ gen_list_internal <- function(expr, l, use_vec, output_format, name_str, parent_
   
   # * Apply expression and return
   if (output_format == OUTPUT_FORMAT$NUM) {
-    apply_func <- { if (use_vec) function(X, FUN) vapply(X, FUN, 0) 
-                    else         function(X, FUN) lapply(X, FUN) }
-    rv <- apply_func(1:nrow(cartesian_df), function(i) eval(expr, cartesian_df[i,,drop=FALSE], parent_frame))
+    if (use_vec) {
+      rv <- apply_to_cartesian(expr, cartesian_df, parent_frame)
+    } else {
+      rv <- lapply(1:nrow(cartesian_df), function(i) eval(expr, cartesian_df[i,,drop=FALSE], parent_frame))
+    }
     if (!is.null(name_str)) names(rv) <- name_vec
     return(rv)
     
@@ -886,6 +961,7 @@ gen_list_internal <- function(expr, l, use_vec, output_format, name_str, parent_
     return(apply_func(1:nrow(cartesian_df), function(i) eval_char_pattern(char_pattern_expr, cartesian_df[i,,drop=FALSE], parent_frame)))
     
   } else if (output_format == OUTPUT_FORMAT$DF) {
+    if (is.null(name_str)) expr <- insert_names(expr)
     rv_list <- lapply(1:nrow(cartesian_df), function(i) eval(expr, cartesian_df[i,,drop=FALSE], parent_frame))
     if (!is.null(name_str)) names(rv_list) <- name_vec
     return(as.data.frame(do.call("rbind", rv_list)))

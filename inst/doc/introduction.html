@@ -12,7 +12,7 @@
 
 <meta name="author" content="Patrick Roocks" />
 
-<meta name="date" content="2021-01-10" />
+<meta name="date" content="2021-04-02" />
 
 <title>Introduction to listcompr</title>
 
@@ -329,7 +329,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 <h1 class="title toc-ignore">Introduction to listcompr</h1>
 <h4 class="author">Patrick Roocks</h4>
-<h4 class="date">2021-01-10</h4>
+<h4 class="date">2021-04-02</h4>
 
 
 
@@ -347,7 +347,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <p>Additional conditions are implicitly and-connected, i.e., if we want to explicitly exclude the number 8 we can state:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">gen.vector</span>(i, <span class="dt">i =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">10</span>, i <span class="op">%%</span><span class="st"> </span><span class="dv">3</span> <span class="op">==</span><span class="st"> </span><span class="dv">0</span> <span class="op">||</span><span class="st"> </span>i <span class="op">%%</span><span class="st"> </span><span class="dv">4</span> <span class="op">==</span><span class="st"> </span><span class="dv">0</span>, i <span class="op">!=</span><span class="st"> </span><span class="dv">8</span>)</span></code></pre></div>
 <pre><code>## [1] 3 4 6 9</code></pre>
-<p>Of course, we also could also unify that to one condition via <code>(...) &amp;&amp; i != 8</code>.</p>
+<p>Of course, we also could also unify that to one condition via <code>(... || ...) &amp;&amp; i != 8</code>.</p>
 </div>
 <div id="simple-examples-of-lists-and-data-frames-with-two-variables" class="section level3">
 <h3>Simple examples of lists and data frames with two variables</h3>
@@ -370,51 +370,14 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 ## 
 ## [[6]]
 ## [1] 3 3</code></pre>
-<p>It also allowed to use the current value of <code>i</code> within the range of <code>j</code>. We can omit the condition <code>i &lt;= j</code> by changing the range for <code>j</code> to <code>j = i:3</code>. Moreover we now use the similar function <code>gen.data.frame</code> which puts each generated vector in a row of a data frame:</p>
+<p>It’s also allowed to use the current value of <code>i</code> within the range of <code>j</code>. We can omit the condition <code>i &lt;= j</code> by changing the range for <code>j</code> to <code>j = i:3</code>. Moreover we now use the similar function <code>gen.data.frame</code> which puts each generated vector in a row of a data frame:</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(i, j), <span class="dt">i =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">3</span>, <span class="dt">j =</span> i<span class="op">:</span><span class="dv">3</span>)</span>
 <span id="cb7-2"><a href="#cb7-2"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
 <table>
 <thead>
 <tr class="header">
-<th align="right">V1</th>
-<th align="right">V2</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="right">1</td>
-<td align="right">1</td>
-</tr>
-<tr class="even">
-<td align="right">1</td>
-<td align="right">2</td>
-</tr>
-<tr class="odd">
-<td align="right">2</td>
-<td align="right">2</td>
-</tr>
-<tr class="even">
-<td align="right">1</td>
-<td align="right">3</td>
-</tr>
-<tr class="odd">
-<td align="right">2</td>
-<td align="right">3</td>
-</tr>
-<tr class="even">
-<td align="right">3</td>
-<td align="right">3</td>
-</tr>
-</tbody>
-</table>
-<p>The name of the columns of a the data frame are by default <code>&#39;V1&#39;</code> and <code>&#39;V2&#39;</code>. We can specify names by taking a named vector as base expression:</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(<span class="dt">a =</span> i, <span class="dt">b =</span> j), <span class="dt">i =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">3</span>, <span class="dt">j =</span> i<span class="op">:</span><span class="dv">3</span>)</span>
-<span id="cb8-2"><a href="#cb8-2"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
-<table>
-<thead>
-<tr class="header">
-<th align="right">a</th>
-<th align="right">b</th>
+<th align="right">i</th>
+<th align="right">j</th>
 </tr>
 </thead>
 <tbody>
@@ -448,8 +411,8 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <div id="ex1" class="section level3">
 <h3>A real world example</h3>
 <p>Assume you have an arbitrary amount quadratic tiles and want to arrange them on your terrace under a certain condition: the number of tiles at the border should be the same as the number of tiles in the inner (i.e., all tiles without the border). For instance, a terrace with <span class="math inline">\(6 \times 4\)</span> tiles has <span class="math inline">\((6-2)\cdot(4-2) = 8\)</span> tiles at the inner and <span class="math inline">\((6\cdot4)-8 = 14\)</span> tiles in the inner, i.e., does not fulfill the condition. The maximum size of your terrace is <span class="math inline">\(20 \times 20\)</span> tiles (e.g., size of your garden). We get all possible sizes of a terrace with that condition via:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(<span class="dt">x =</span> x, <span class="dt">y =</span> y), <span class="dt">x =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>, <span class="dt">y =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>, (x<span class="dv">-2</span>)<span class="op">*</span>(y<span class="dv">-2</span>) <span class="op">==</span><span class="st"> </span>x<span class="op">*</span>y<span class="op">/</span><span class="dv">2</span>)</span>
-<span id="cb9-2"><a href="#cb9-2"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(x, y), <span class="dt">x =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>, <span class="dt">y =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>, (x<span class="dv">-2</span>)<span class="op">*</span>(y<span class="dv">-2</span>) <span class="op">==</span><span class="st"> </span>x<span class="op">*</span>y<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb8-2"><a href="#cb8-2"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
 <table>
 <thead>
 <tr class="header">
@@ -477,6 +440,41 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </tbody>
 </table>
 <p>The outer size of the terrace with that condition is either <span class="math inline">\(6 \times 8\)</span> or <span class="math inline">\(5 \times 12\)</span> tiles (and the symmetric solutions). Interestingly, it’s easy to prove that these are the only solutions even if your garden and the amount of tiles is infinite.</p>
+<p>Now let’s prettify the output. Let’s rename the “x” and “y” columns to “width” and “height”. We also add a column for the number of tiles in the inner (which equals the number of tiles at the border).</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(<span class="dt">width =</span> x, <span class="dt">height =</span> y, inner_tiles), <span class="dt">x =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>, <span class="dt">y =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">20</span>, </span>
+<span id="cb9-2"><a href="#cb9-2"></a>                     <span class="dt">inner_tiles =</span> (x<span class="dv">-2</span>)<span class="op">*</span>(y<span class="dv">-2</span>), inner_tiles <span class="op">==</span><span class="st"> </span>x<span class="op">*</span>y<span class="op">/</span><span class="dv">2</span>)</span>
+<span id="cb9-3"><a href="#cb9-3"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="right">width</th>
+<th align="right">height</th>
+<th align="right">inner_tiles</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">12</td>
+<td align="right">5</td>
+<td align="right">30</td>
+</tr>
+<tr class="even">
+<td align="right">8</td>
+<td align="right">6</td>
+<td align="right">24</td>
+</tr>
+<tr class="odd">
+<td align="right">6</td>
+<td align="right">8</td>
+<td align="right">24</td>
+</tr>
+<tr class="even">
+<td align="right">5</td>
+<td align="right">12</td>
+<td align="right">30</td>
+</tr>
+</tbody>
+</table>
 </div>
 </div>
 <div id="advanced-features" class="section level2">
@@ -491,9 +489,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <table>
 <thead>
 <tr class="header">
-<th align="right">V1</th>
-<th align="right">V2</th>
-<th align="right">V3</th>
+<th align="right">a_1</th>
+<th align="right">a_2</th>
+<th align="right">a_3</th>
 </tr>
 </thead>
 <tbody>
@@ -522,17 +520,17 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="expanded-expressions" class="section level3">
 <h3>Expanded expressions</h3>
-<p>Now assume we want to get all tuples <span class="math inline">\((a_1, ..., a_5) \in \mathbb{N}^5\)</span> with the condition <span class="math inline">\(\sum_{i} a_i = 6\)</span>. We make use of the <code>&lt;operator&gt; ... &lt;operator&gt;</code> notation of <strong>listcompr</strong> which expands expressions an intuitive way:</p>
+<p>Now assume we want to get all tuples <span class="math inline">\((a_1, ..., a_5) \in \mathbb{N}^5\)</span> with the condition <span class="math inline">\(\sum_{i} a_i = 6\)</span>. We make use of the <code>&lt;operator&gt; ... &lt;operator&gt;</code> notation of <strong>listcompr</strong> which expands expressions in an intuitive way:</p>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(a_<span class="dv">1</span>, ..., a_<span class="dv">5</span>), <span class="dt">a_ =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">5</span>, a_<span class="dv">1</span> <span class="op">+</span><span class="st"> </span>... <span class="op">+</span><span class="st"> </span>a_<span class="dv">5</span> <span class="op">==</span><span class="st"> </span><span class="dv">6</span>)</span>
 <span id="cb11-2"><a href="#cb11-2"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
 <table>
 <thead>
 <tr class="header">
-<th align="right">V1</th>
-<th align="right">V2</th>
-<th align="right">V3</th>
-<th align="right">V4</th>
-<th align="right">V5</th>
+<th align="right">a_1</th>
+<th align="right">a_2</th>
+<th align="right">a_3</th>
+<th align="right">a_4</th>
+<th align="right">a_5</th>
 </tr>
 </thead>
 <tbody>
@@ -577,18 +575,18 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </div>
 <div id="generated-conditions" class="section level3">
 <h3>Generated conditions</h3>
-<p>Let’s assume a similar example to the above one. We want to generate all tuples <span class="math inline">\((a_1, ..., a_5) \in \{1, ..., 5\}^5\)</span> with <span class="math inline">\(\sum_{i} a_i = 10\)</span> and <span class="math inline">\(a_i \leq a_{i+1}\)</span>. To avoid writing <code>a_1 &lt; a_2, a_2 &lt; a_3, ...</code> there is the function <code>gen.logical.and</code> which is a list comprehension helper to generate conditions. We can express this data frame by:</p>
+<p>Let’s consider a similar example to the above one. We want to generate all tuples <span class="math inline">\((a_1, ..., a_5) \in \{1, ..., 5\}^5\)</span> with <span class="math inline">\(\sum_{i} a_i = 10\)</span> and <span class="math inline">\(a_i \leq a_{i+1}\)</span>. To avoid writing <code>a_1 &lt; a_2, a_2 &lt; a_3, ...</code> there is the function <code>gen.logical.and</code> which is a list comprehension helper to generate conditions. We can express this data frame by:</p>
 <div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(a_<span class="dv">1</span>, ..., a_<span class="dv">5</span>), <span class="dt">a_ =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">5</span>, <span class="kw">sum</span>(a_<span class="dv">1</span>, ..., a_<span class="dv">5</span>) <span class="op">==</span><span class="st"> </span><span class="dv">10</span>, </span>
 <span id="cb12-2"><a href="#cb12-2"></a>                     <span class="kw">gen.logical.and</span>(a_i <span class="op">&lt;=</span><span class="st"> </span><span class="kw">a_</span>(i<span class="op">+</span><span class="dv">1</span>), <span class="dt">i =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">4</span>))</span>
 <span id="cb12-3"><a href="#cb12-3"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
 <table>
 <thead>
 <tr class="header">
-<th align="right">V1</th>
-<th align="right">V2</th>
-<th align="right">V3</th>
-<th align="right">V4</th>
-<th align="right">V5</th>
+<th align="right">a_1</th>
+<th align="right">a_2</th>
+<th align="right">a_3</th>
+<th align="right">a_4</th>
+<th align="right">a_5</th>
 </tr>
 </thead>
 <tbody>
@@ -646,10 +644,10 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <table>
 <thead>
 <tr class="header">
-<th align="right">V1</th>
-<th align="right">V2</th>
-<th align="right">V3</th>
-<th align="right">V4</th>
+<th align="right">a_1</th>
+<th align="right">a_2</th>
+<th align="right">a_3</th>
+<th align="right">a_4</th>
 </tr>
 </thead>
 <tbody>
@@ -705,11 +703,70 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </table>
 <p><em>Note:</em> Don’t use such an approach for creating large data sets of permutations, e.g., for all the 5040 permutations of <code>1:7</code>. This approach is very slow! We recommend the <code>permn</code> function from the <a href="https://CRAN.R-project.org/package=combinat">combinat</a> package.</p>
 </div>
+<div id="using-generated-conditions-within-dplyr" class="section level3">
+<h3>Using generated conditions within dplyr</h3>
+<p>Conditions created with <code>gen.logical.and</code> or <code>gen.logical.or</code> can be used in other R packages, e.g., <a href="https://dplyr.tidyverse.org/">dplyr</a>. To use a generated condition in, e.g., <code>dplyr::filter</code> you need to put the operator <code>!!</code> in front of the function which generates the condition.</p>
+<p>For example, assume you have a data frame with the result of throwing three dices. You want to get the outcomes where at least two dices show the number 6. We show only the first 8 results:</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>dices &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(a_<span class="dv">1</span>, ..., a_<span class="dv">3</span>), <span class="dt">a_ =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">6</span>)</span>
+<span id="cb14-2"><a href="#cb14-2"></a>res &lt;-<span class="st"> </span>dplyr<span class="op">::</span><span class="kw">filter</span>(dices, <span class="op">!!</span><span class="kw">gen.logical.or</span>(a_i <span class="op">==</span><span class="st"> </span><span class="dv">6</span> <span class="op">&amp;</span><span class="st"> </span>a_j <span class="op">==</span><span class="st"> </span><span class="dv">6</span>, <span class="dt">i =</span> <span class="dv">1</span><span class="op">:</span><span class="dv">3</span>, <span class="dt">j =</span> (i<span class="op">+</span><span class="dv">1</span>)<span class="op">:</span><span class="dv">3</span>))</span>
+<span id="cb14-3"><a href="#cb14-3"></a>knitr<span class="op">::</span><span class="kw">kable</span>(res[<span class="dv">1</span><span class="op">:</span><span class="dv">8</span>,])</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="right">a_1</th>
+<th align="right">a_2</th>
+<th align="right">a_3</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">6</td>
+<td align="right">6</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="right">6</td>
+<td align="right">2</td>
+</tr>
+<tr class="odd">
+<td align="right">6</td>
+<td align="right">6</td>
+<td align="right">3</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="right">6</td>
+<td align="right">4</td>
+</tr>
+<tr class="odd">
+<td align="right">6</td>
+<td align="right">6</td>
+<td align="right">5</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="right">1</td>
+<td align="right">6</td>
+</tr>
+<tr class="odd">
+<td align="right">6</td>
+<td align="right">2</td>
+<td align="right">6</td>
+</tr>
+<tr class="even">
+<td align="right">6</td>
+<td align="right">3</td>
+<td align="right">6</td>
+</tr>
+</tbody>
+</table>
+</div>
 <div id="ex2" class="section level3">
 <h3>Nested list and vector comprehensions</h3>
 <p>The list comprehension functions of <strong>listcompr</strong> can also be nested. In the following example we use <code>gen.data.frame</code> as the outer function and <code>gen.vector</code> (within a sum) to generate a data frame of the sum of all divisors of a whole number (the number itself excluded):</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(<span class="dt">a =</span> a, <span class="dt">sumdiv =</span> <span class="kw">sum</span>(<span class="kw">gen.vector</span>(x, <span class="dt">x =</span> <span class="dv">1</span><span class="op">:</span>(a<span class="dv">-1</span>), a <span class="op">%%</span><span class="st"> </span>x <span class="op">==</span><span class="st"> </span><span class="dv">0</span>))), <span class="dt">a =</span> <span class="dv">2</span><span class="op">:</span><span class="dv">10</span>)</span>
-<span id="cb14-2"><a href="#cb14-2"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(a, <span class="dt">sumdiv =</span> <span class="kw">sum</span>(<span class="kw">gen.vector</span>(x, <span class="dt">x =</span> <span class="dv">1</span><span class="op">:</span>(a<span class="dv">-1</span>), a <span class="op">%%</span><span class="st"> </span>x <span class="op">==</span><span class="st"> </span><span class="dv">0</span>))), <span class="dt">a =</span> <span class="dv">2</span><span class="op">:</span><span class="dv">10</span>)</span>
+<span id="cb15-2"><a href="#cb15-2"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
 <table>
 <thead>
 <tr class="header">
@@ -756,10 +813,67 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 </tr>
 </tbody>
 </table>
-<p>Very similar to this, we can generate a vector of so called <em>perfect numbers</em>. A perfect number is characterized by being identical to their sum of divisors. To this end we use the calculation of the sum of divisors within the condition:</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1"></a><span class="kw">gen.vector</span>(a, <span class="dt">a =</span> <span class="dv">2</span><span class="op">:</span><span class="dv">100</span>, a <span class="op">==</span><span class="st"> </span><span class="kw">sum</span>(<span class="kw">gen.vector</span>(x, <span class="dt">x =</span> <span class="dv">1</span><span class="op">:</span>(a<span class="dv">-1</span>), a <span class="op">%%</span><span class="st"> </span>x <span class="op">==</span><span class="st"> </span><span class="dv">0</span>)))</span></code></pre></div>
-<pre><code>## [1]  6 28</code></pre>
-<p>This means the only perfect numbers between 1 and 200 are 6 and 28.</p>
+<p>Now we want to add a flag to this data frame if the number <code>a</code> is a so called <em>perfect number</em>. A perfect number is characterized by being identical to their sum of divisors. To this end we use a substitution variable <code>sumdiv</code> for the sum of divisors. We use this variable for checking if the number is perfect:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1"></a>df &lt;-<span class="st"> </span><span class="kw">gen.data.frame</span>(<span class="kw">c</span>(a, sumdiv, <span class="dt">perfect =</span> (sumdiv <span class="op">==</span><span class="st"> </span>a)), <span class="dt">a =</span> <span class="dv">2</span><span class="op">:</span><span class="dv">10</span>, </span>
+<span id="cb16-2"><a href="#cb16-2"></a>                     <span class="dt">sumdiv =</span> <span class="kw">sum</span>(<span class="kw">gen.vector</span>(x, <span class="dt">x =</span> <span class="dv">1</span><span class="op">:</span>(a<span class="dv">-1</span>), a <span class="op">%%</span><span class="st"> </span>x <span class="op">==</span><span class="st"> </span><span class="dv">0</span>)))</span>
+<span id="cb16-3"><a href="#cb16-3"></a>knitr<span class="op">::</span><span class="kw">kable</span>(df)</span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th align="right">a</th>
+<th align="right">sumdiv</th>
+<th align="right">perfect</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right">2</td>
+<td align="right">1</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">3</td>
+<td align="right">1</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">4</td>
+<td align="right">3</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">5</td>
+<td align="right">1</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">6</td>
+<td align="right">6</td>
+<td align="right">1</td>
+</tr>
+<tr class="even">
+<td align="right">7</td>
+<td align="right">1</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">8</td>
+<td align="right">7</td>
+<td align="right">0</td>
+</tr>
+<tr class="even">
+<td align="right">9</td>
+<td align="right">4</td>
+<td align="right">0</td>
+</tr>
+<tr class="odd">
+<td align="right">10</td>
+<td align="right">8</td>
+<td align="right">0</td>
+</tr>
+</tbody>
+</table>
+<p>This means the only perfect number between 1 and 10 is 6.</p>
 </div>
 </div>
 <div id="character-compositions" class="section level2">

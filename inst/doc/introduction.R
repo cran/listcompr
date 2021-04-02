@@ -15,11 +15,12 @@ df <- gen.data.frame(c(i, j), i = 1:3, j = i:3)
 knitr::kable(df)
 
 ## ---- results='asis'----------------------------------------------------------
-df <- gen.data.frame(c(a = i, b = j), i = 1:3, j = i:3)
+df <- gen.data.frame(c(x, y), x = 1:20, y = 1:20, (x-2)*(y-2) == x*y/2)
 knitr::kable(df)
 
 ## ---- results='asis'----------------------------------------------------------
-df <- gen.data.frame(c(x = x, y = y), x = 1:20, y = 1:20, (x-2)*(y-2) == x*y/2)
+df <- gen.data.frame(c(width = x, height = y, inner_tiles), x = 1:20, y = 1:20, 
+                     inner_tiles = (x-2)*(y-2), inner_tiles == x*y/2)
 knitr::kable(df)
 
 ## ---- results='asis'----------------------------------------------------------
@@ -41,11 +42,18 @@ df <- gen.data.frame(c(a_1, ..., a_4), a_ = 1:4,
 knitr::kable(df[1:8,])
 
 ## ---- results='asis'----------------------------------------------------------
-df <- gen.data.frame(c(a = a, sumdiv = sum(gen.vector(x, x = 1:(a-1), a %% x == 0))), a = 2:10)
+dices <- gen.data.frame(c(a_1, ..., a_3), a_ = 1:6)
+res <- dplyr::filter(dices, !!gen.logical.or(a_i == 6 & a_j == 6, i = 1:3, j = (i+1):3))
+knitr::kable(res[1:8,])
+
+## ---- results='asis'----------------------------------------------------------
+df <- gen.data.frame(c(a, sumdiv = sum(gen.vector(x, x = 1:(a-1), a %% x == 0))), a = 2:10)
 knitr::kable(df)
 
-## -----------------------------------------------------------------------------
-gen.vector(a, a = 2:100, a == sum(gen.vector(x, x = 1:(a-1), a %% x == 0)))
+## ---- results='asis'----------------------------------------------------------
+df <- gen.data.frame(c(a, sumdiv, perfect = (sumdiv == a)), a = 2:10, 
+                     sumdiv = sum(gen.vector(x, x = 1:(a-1), a %% x == 0)))
+knitr::kable(df)
 
 ## -----------------------------------------------------------------------------
 gen.vector.char('size: {x}x{y} tiles, where {x*y/2} tiles are at the border/inner',

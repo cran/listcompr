@@ -1,6 +1,6 @@
 Package: listcompr
-Version: 0.1.0
-Date: 2021-01-10
+Version: 0.2.0
+Date: 2021-04-02
 Title: List Comprehension for R
 Author: Patrick Roocks <mail@p-roocks.de>
 Maintainer: Patrick Roocks <mail@p-roocks.de>
@@ -9,13 +9,12 @@ Description: Syntactic shortcuts for creating synthetic lists, vectors, and
 URL: https://github.com/patrickroocks/listcompr
 Depends: R (>= 3.1.2)
 License: GPL (>= 2)
-LazyData: true
-Suggests: testthat, rmarkdown, knitr
+Suggests: testthat, rmarkdown, knitr, dplyr (>= 1.0.0)
 Collate: 'listcompr.r' 'gen-list.r'
 VignetteBuilder: knitr
 RoxygenNote: 7.1.1
 Encoding: UTF-8
 NeedsCompilation: no
-Packaged: 2021-01-10 12:09:52 UTC; patrick
+Packaged: 2021-04-02 15:29:44 UTC; patrick
 Repository: CRAN
-Date/Publication: 2021-01-13 16:00:02 UTC
+Date/Publication: 2021-04-02 15:40:02 UTC
