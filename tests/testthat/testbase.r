@@ -1,3 +1,5 @@
+suppressPackageStartupMessages(library(dplyr))
+
 test_that("Trivial tests", {
   expect_error(gen.list(), "argument \"expr\" is missing")
   expect_error(gen.vector(), "argument \"expr\" is missing")
@@ -69,6 +71,18 @@ test_that("Basic data frame tests", {
   expect_equal(gen.data.frame(c(x = a, b), a = 1:2, b = 1), data.frame(x = c(1, 2), b = 1))
   expect_equal(gen.data.frame(c(b = a, b), a = 1:2, b = 1), data.frame(b = c(1, 2), V2 = 1))
   expect_equal(gen.data.frame(a, a = 1:5),  data.frame(a = 1:5))
+  
+  expect_equal(gen.data.frame(list(a = i, b = "x_{i}"), i = 1:2, byrow = TRUE),
+               structure(list(V1 = c("1", "x_1"), V1 = c("2", "x_2")), class = "data.frame", row.names = c("a",  "b")))
+  
+  expect_error(gen.data.frame(data.frame(a = c(1,2)), i = 1:2),
+               "the inner expression was evaluated to a data frame with 2 rows, but expected exactly one row")
+  
+  expect_equal(gen.data.frame(c(a = c(1, 2) * i), i = 1:3),
+               data.frame(a1 = c(1, 2, 3), a2 = c(2, 4, 6)))
+  
+  expect_error(gen.data.frame(list(a = c(1, 2) * i), i = 1:3),
+               "the inner expression was evaluated to a data frame with 2 rows, but expected exactly one row")
 })
 
 test_that("Named lists/vectors/dataframes tests", {
@@ -80,8 +94,8 @@ test_that("Named lists/vectors/dataframes tests", {
 
   expect_equal(gen.named.vector("a{10+a}", 2*a, a=1:2), c(a11 = 2, a12 = 4))
   
-  expect_equal(gen.named.list("sum({c(a_1, ..., a_4)})", sum(a_1, ..., a_4), a_ = 1:2, a_1 + ... + a_4 <= 5),
-               list("sum(c(1, 1, 1, 1))" = 4, "sum(c(2, 1, 1, 1))" = 5, "sum(c(1, 2, 1, 1))" = 5, "sum(c(1, 1, 2, 1))" = 5, "sum(c(1, 1, 1, 2))" = 5))
+  expect_equal(gen.named.list("sum({a_1}, {a_2}, {a_3}, {a_4})", sum(a_1, ..., a_4), a_ = 1:2, a_1 + ... + a_4 <= 5),
+               list("sum(1, 1, 1, 1)" = 4, "sum(2, 1, 1, 1)" = 5, "sum(1, 2, 1, 1)" = 5, "sum(1, 1, 2, 1)" = 5, "sum(1, 1, 1, 2)" = 5))
   
   expect_equal(gen.named.list.expr("a_{i}", a_i, i = 1:5), quote(list(a_1 = a_1, a_2 = a_2, a_3 = a_3, a_4 = a_4, a_5 = a_5)))
   
@@ -92,6 +106,28 @@ test_that("Named lists/vectors/dataframes tests", {
   
   expect_equal(gen.named.data.frame("col_{i}", 10 * i + c(a = 1, b = 2), i = 1:2),
                data.frame(a = c(11, 21), b = c(12, 22), row.names = c("col_1",  "col_2")))
+  
+  expect_equal(gen.named.data.frame("col_{a}", c(a, b), a = 1:2, b = 1),
+               data.frame(a = c(1, 2), b = c(1, 1), row.names = c("col_1",  "col_2")))
+  
+  expect_equal(gen.data.frame(list(a = i, b = "x{j}"), j = 0:2, i = 1:2),
+               structure(list(a = c(1L, 1L, 1L, 2L, 2L, 2L), b = c("x0", "x1", "x2", "x0", "x1", "x2")), class = "data.frame", row.names = c(NA,-6L)))
+  
+  expect_equal(gen.named.data.frame("{i}", list(i, n = "x{j}"), j = 0:2, i = 1:2, byrow = TRUE),
+               structure(list("1" = c("1", "x0"), "1" = c("1", "x1"), "1" = c("1",  "x2"), "2" = c("2", "x0"), "2" = c("2", "x1"), "2" = c("2", "x2" )), class = "data.frame", row.names = c("i", "n")))
+  
+  expect_equal(gen.list(gen.named.list("res_{i}x{j}", i * j, j = i:2), i = 1:2), list(list(res_1x1 = 1, res_1x2 = 2), list(res_2x2 = 4)))
+
+  expect_equal(gen.list(gen.named.vector("res_{i}x{j}", i * j, j = i:2), i = 1:2), list(c(res_1x1 = 1, res_1x2 = 2), c(res_2x2 = 4)))
+  
+  str <- "x{i}"
+  expect_equal(gen.data.frame(gen.named.vector(str, i+j, i = 1:2), j = 1:2),
+               structure(list(x1 = 2:3, x2 = 3:4), class = "data.frame", row.names = c(NA,  -2L)))
+  
+  expect_equal(gen.named.vector(str, i, i = 1:2), c(x1 = 1, x2 = 2))
+  
+  expect_equal(gen.data.frame(gen.named.list('a_{j}', j * i, j = 1:2), i = 1:3),
+               data.frame(a_1 = 1:3, a_2 = c(2L, 4L, 6L)))
 })
 
 test_that("three dots tests", {
@@ -162,20 +198,28 @@ test_that("expression tests", {
 
 
 test_that("character tests", {
-  expect_equal(gen.list.char('a{i}_{2*i}', i = 1:3), list("a1_2", "a2_4", "a3_6"))
-  expect_equal(gen.vector.char("{if (i==1) { 'a' } else 'b'}{i}", i = 1:3), c("a1", "b2", "b3"))
+  expect_equal(gen.list("a{i}_{2*i}", i = 1:3), list("a1_2", "a2_4", "a3_6"))
+  expect_equal(gen.vector("{if (i==1) { 'a' } else 'b'}{i}", i = 1:3), c("a1", "b2", "b3"))
   
   x <- 1
-  expect_equal(gen.vector.char("{i}{j}, {x}", i = 1:2, j = i:2), c("11, 1", "12, 1", "22, 1"))
-  expect_equal(gen.vector.char("{x+y}", x = 10:11, y = x:11), c("20", "21", "22"))
+  expect_equal(gen.vector("{i}{j}, {x}", i = 1:2, j = i:2), c("11, 1", "12, 1", "22, 1"))
+  expect_equal(gen.vector("{x+y}", x = 10:11, y = x:11), c("20", "21", "22"))
   
-  expect_equal(gen.vector.char("{i+1}_{i}", i = 1:2), c("2_1", "3_2"))
-  expect_equal(gen.vector.char("{{a}}", i = 1:2), c("{{a}}", "{{a}}"))
+  expect_equal(gen.vector("{i+1}_{i}", i = 1:2), c("2_1", "3_2"))
+  expect_equal(gen.vector("{{a}}", i = 1:2), c("{{a}}", "{{a}}"))
+})
+
+test_that("special type tests", {
+  expect_equal(gen.data.frame(list(x = as.difftime("0:{i}:30")), i = 1:5), 
+               structure(list(x = structure(c(1.5, 2.5, 3.5, 4.5, 5.5), class = "difftime", units = "mins")), row.names = c(NA,  -5L), class = "data.frame"))
+  expect_equal(gen.data.frame(as.difftime("0:{i}:30"), i = 1:5),
+               structure(list(V1 = structure(c(1.5, 2.5, 3.5, 4.5, 5.5), class = "difftime", units = "mins")), row.names = c(NA,  -5L), class = "data.frame"))
+  
 })
 
 test_that("non-numeric test", {
-  expect_equal(gen.vector(m, m = month.abb, substr(m, 1, 1) == 'J'), c("Jan", "Jun", "Jul"))
-  expect_equal(gen.list(m, m = month.abb, substr(m, 1, 1) == 'J'), list("Jan", "Jun", "Jul"))
+  expect_equal(gen.vector(m, m = month.abb, substr(m, 1, 1) == "J"), c("Jan", "Jun", "Jul"))
+  expect_equal(gen.list(m, m = month.abb, substr(m, 1, 1) == "J"), list("Jan", "Jun", "Jul"))
 })
 
 test_that("sorting", {
@@ -189,4 +233,46 @@ test_that("sorting", {
 test_that("substitutions", {
   expect_equal(gen.data.frame(c(i, j), i = 0:3, j = 2 * i), data.frame(i = c(0, 1, 2, 3), j = c(0, 2, 4, 6)))
   expect_equal(gen.data.frame(c(i, j), i = 0:3, j = 2 * i, j < 6), data.frame(i = c(0, 1, 2), j = c(0, 2, 4)))
+})
+
+test_that("matrix standard tests", {
+  expect_equal(gen.matrix(gen.vector(i+j, i = 1:2), j = 1:3), matrix(c(2, 3, 3, 4, 4, 5), ncol = 2, byrow = TRUE))
+  expect_equal(gen.matrix(c(1, a), a = 1:2), matrix(c(1, 1, 1, 2), ncol = 2, byrow = TRUE))
+  expect_equal(gen.matrix(c(1, a = a), a = 1:2), matrix(c(1, 1, 1, 2), ncol = 2, byrow = TRUE, dimnames = list(NULL, c("V1", "a"))))
+  expect_equal(gen.named.matrix("row{a}", c(1, a = a), a = 1:2), matrix(c(1, 1, 1, 2), ncol = 2, byrow = TRUE, dimnames = list(c("row1", "row2"), c("V1", "a"))))
+  
+  expect_equal(gen.matrix(i+j, i=1:2, j=i:2),  matrix(c(2, 3, 4), ncol = 1))
+  expect_equal(gen.matrix(c(a = 10*i+j), i=1:2, j=1:3), matrix(c(11, 21, 12, 22, 13, 23), ncol = 1, byrow = TRUE, dimnames = list(NULL, "a")))
+  expect_equal(gen.named.matrix("{i}{j}", 10*i+j, i=1:2, j=1:3),
+               matrix(c(11, 21, 12, 22, 13, 23), ncol = 1, byrow = TRUE, dimnames = list(c("11", "21", "12", "22", "13", "23"))))
+  
+  expect_equal(gen.matrix(data.frame(a = 1, b = i), i = 1:2, byrow = TRUE),
+               matrix(c(1, 1, 1, 2), ncol = 2, dimnames = list(c("a",  "b"), NULL)))
+  expect_equal(gen.matrix(data.frame(x+y), x = 1:2, y = 1:2),
+               matrix(c(2, 3, 3, 4), ncol = 1, byrow = TRUE, dimnames = list(NULL, c("V1"))))
+  expect_equal(gen.matrix(list(x+y), x = 1:2, y = 1:2), matrix(c(2, 3, 3, 4), ncol = 2, byrow = TRUE))
+  
+  expect_equal(gen.matrix(matrix(c(1,i), ncol=2), i = 1:2, byrow = TRUE),
+               matrix(c(1, 1, 1, 2), ncol = 2, byrow = TRUE))
+  
+  expect_error(gen.matrix(data.frame(c(1,2)), i = 1),
+               "the inner expression was evaluated to a data frame with 2 rows, but expected exactly one row")
+})
+
+test_that("matrix 2dim tests", {
+  expect_equal(gen.matrix(10*i+j, i=1:2, j=1:3), matrix(gen.vector(10*i+j, i=1:2, j=1:3), ncol = 3))
+  expect_equal(gen.matrix(10*i+j, i=1:2, j=1:3, byrow = TRUE), matrix(gen.vector(10*i+j, i=1:2, j=1:3), ncol = 2, byrow = TRUE))
+  x <- 4
+  expect_equal(gen.matrix(10*i+j, i=1:2, j=seq(1,6,x)), matrix(c(11, 15, 21, 25), ncol = 2, byrow = TRUE))
+  expect_equal(gen.matrix(10*i+j, i=1:2, j=1:3, byrow = TRUE), matrix(c(11, 12, 13, 21, 22, 23), ncol = 2, byrow = FALSE))
+})
+
+
+test_that("tests with dplyr", {
+  df <- gen.data.frame(c(a_1, ..., a_4), a_ = 1:2)
+  expect_equal(dplyr::filter(df, !!gen.logical.and(a_i == a_(i+1), i = 1:3)),
+               data.frame(a_1 = 1:2, a_2 = 1:2, a_3 = 1:2, a_4 = 1:2))
+  expect_equal(dplyr::filter(df, !!gen.logical.or(a_i == a_(i+1) & a_(i+1) == a_(i+2), i = 1:2)),
+               data.frame(a_1 = c(1L, 2L, 2L, 1L, 1L, 2L), a_2 = c(1L, 1L,  2L, 1L, 2L, 2L), 
+                          a_3 = c(1L, 1L, 2L, 1L, 2L, 2L), a_4 = c(1L,  1L, 1L, 2L, 2L, 2L)))
 })

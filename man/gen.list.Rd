@@ -4,13 +4,16 @@
 \alias{gen.list}
 \alias{gen.vector}
 \alias{gen.data.frame}
-\title{Generate Lists, Vectors and Data Frames with List Comprehension}
+\alias{gen.matrix}
+\title{Generate Lists, Vectors, Data Frames and Matrices with List Comprehension}
 \usage{
 gen.list(expr, ...)
 
 gen.vector(expr, ...)
 
-gen.data.frame(expr, ...)
+gen.data.frame(expr, ..., byrow = FALSE)
+
+gen.matrix(expr, ..., byrow = FALSE)
 }
 \arguments{
 \item{expr}{A base expression containing free variables which is evaluated for all combinations of variables, 
@@ -20,7 +23,11 @@ Expected structure of \code{expr}:
  \itemize{
    \item For \code{gen.list} it may have arbitrary structure (including a list).
    \item For \code{gen.vector} a value (i.e., a vector of length 1) is expected.
-   \item For \code{gen.data.frame} a (named) vector or list is expected which describes one row of the data frame.
+   \item For \code{gen.data.frame} a (named) vector or list is expected which describes exactly one row of the data frame.
+         Use \code{list(name = val)} if \code{val} is a non-fundamental type like \code{difftime}.
+   \item For \code{gen.matrix} either a (named) vector/list (like \code{gen.data.frame}) or a scalar is expected.
+         In the first case, we expect the same as for \code{gen.data.frame}.
+         In the latter case we expect exactly two variables (inducing rows and columns where the order depends on \code{byrow}) within the \code{...} arguments.
   }
   Within \code{expr} it is allowed to use functions and predefined constants from the parent environment.}
 
@@ -28,10 +35,14 @@ Expected structure of \code{expr}:
 For all free variables occurring in \code{expr} a range must be assigned, e.g., \code{x = 1:3, y = 1:5} for an expression \code{x + y}. 
 At least one variable range is required.
 The ranges may depend on each other, e.g., \code{x = 1:3, y = x:3} or a substitution like \code{x = 1:3, y = 2 * x} is allowed.
-The generated values can be further restricted by conditions (like \code{x <= y}).}
+The generated values can be further restricted by conditions like \code{x <= y}.}
+
+\item{byrow}{Logical. If \code{FALSE} (the default), the elements of a vector within \code{expr} are taken as columns. 
+Otherwise, they are taken as rows.}
 }
 \value{
-The result of \code{gen.list} is a list (a vector for \code{gen.vector}) containing an entry for each combination of the free variables (i.e., the Cartesian product), where all the free variables in \code{expr} are substituted.
+The result of \code{gen.list} is a list (a vector for \code{gen.vector}) containing an entry for each combination of the free variables (i.e., the Cartesian product), 
+where all the free variables in \code{expr} are substituted.
 The function \code{gen.vector} returns a vector while \code{gen.list} may contain also more complex substructures (like vectors or lists).
 
 The output of \code{gen.data.frame} is a data frame where each substituted \code{expr} entry is one row.
@@ -39,17 +50,27 @@ The base expression \code{expr} should contain a (named) vector or list, such th
 If the vector contains a single literal without a name, this is taken as column name. For instance, \code{gen.data.frame(a, a = 1:5)} returns the same as \code{gen.data.frame(c(a = a), a = 1:5)}.
 Default names 'V1', 'V2', ... are used, if no names are given and names can't be automatically detected.
 
+The result of \code{gen.matrix}:
+\itemize{
+  \item It's similar to \code{gen.data.frame}, if \code{expr} evaluates to a vector of length > 1, or row/column names are given.
+        Each substituted \code{expr} entry is one row of the matrix.
+        In contrast to \code{gen.data.frame}, column names are not auto-generated, e.g., \code{gen.matrix(c(a_1, a_2), a_ = 1:2)} is an unnamed matrix.
+        If the \code{expr} argument has explicit names (e.g., \code{c(a_1 = a_1, a_2 = a_2)}), these column names are assigned to the resulting matrix.
+  \item It's a matrix where the rows and columns are induced by the two variables within \code{...}, if \code{expr} is a scalar, and no names or conditions are given.
+        If \code{byrow} is \code{FALSE}, the second variable (i.e., the inner loop) refers to the columns, otherwise it refers to the rows.
+        For instance, \code{gen.matrix(i + j, i = 1:3, j = 1:2)} is a matrix with 3 rows and 2 columns.
+        For \code{gen.matrix(i + j, i = 1:3, j = 1:2, byrow = TRUE)} we get 2 rows and 3 columns.
+}
+
 All expressions and conditions are applied to each combination of the free variables separately, i.e., they are applied row-wise and not vector-wise. 
 For instance, the term \code{sum(x,y)} (within \code{expr} or a condition) is equivalent to \code{x+y}.
 }
 \description{
-Functions to transform a base expression containing free variables into a list, a vector, or a data frame
+Functions to transform a base expression containing free variables into a list, a vector, a data frame, or a matrix
 based on variable ranges and additional conditions.
 }
-\section{Syntactic Features}{
+\section{Indices for variables}{
  
-
-There are several syntactic features to be used in variable ranges, conditions, and expressions.
 
 A range for a variable ending with an underscore (like \code{x_}) defines a set of ranges affecting all variables named \code{{varname}_{index}}, e.g. \code{x_1}.
 For instance, in \code{gen.vector(x_1 + x_2 + x_3, x_ = 1:5)} the variables \code{x_1, x_2, x_3} are all ranging in \code{1:5}.
@@ -61,6 +82,10 @@ For instance, the two following statements produce the same results:
   \item \code{gen.vector(x_1 + x_2 + a, x_ = 1:5, a = 1:2, x_1 = 1:2)}
   \item \code{gen.vector(x_1 + x_2 + a, x_1 = 1:2, x_2 = 1:5, a = 1:2)}
 }
+}
+
+\section{Folded expressions}{
+
 
 Expressions and conditions support a \code{...}-notation which works as follows:
 
@@ -77,9 +102,22 @@ Expressions and conditions support a \code{...}-notation which works as follows:
 The conditions may contain itself list comprehension expressions, e.g., \code{\link{gen.logical.and}} to compose and-connected logical expressions.
 }
 
+\section{Character patterns}{
+
+
+In expression there may occur characters with \code{\{\}}-placeholders. 
+The content of these placeholders is evaluated like any other part of an expression and converted to a character.
+For example, \code{"a{x}"} is transformed into \code{"a1"} for \code{x = 1}. 
+Double brackets are transformed into a single bracket without evaluating the inner expression.
+For instance, \code{"var{x + 1}_{{a}}"} is transformed into \code{"var2_{a}"} for \code{x = 1}.
+}
+
 \examples{
-# Compose 10, 11, 20, 21, 22, 30, ..., 33, ..., 90, ..., 99 into a vector
-gen.vector(x * 10 + y, x = 1:9, y = 1:x)
+# Sum of 1:x
+gen.vector(sum(1:x), x = 1:10)
+
+# Same as above, but return as text
+gen.list("sum of 1 to {x} is {sum(1:x)}", x = 1:5)
 
 # A list containing vectors [1], [1, 2], [1, 2, 3], ...
 gen.list(gen.vector(i, i = 1:n), n = 1:10)
@@ -87,14 +125,22 @@ gen.list(gen.vector(i, i = 1:n), n = 1:10)
 # A data frame of tuples (x_1, x_2, x_3) summing up to 10
 gen.data.frame(c(x_1, ..., x_3), x_ = 1:10, x_1 + ... + x_3 == 10)
 
+# Same as above, but restrict to ascending tuples with x_i <= x_(i+1)
+gen.data.frame(c(x_1, ..., x_3), x_1 = 1:10, x_2 = x_1:10, x_3 = x_2:10,
+               x_1 + ... + x_3 == 10)
+
 # A data.frame containing the numbers in 2:20, the sum of their divisors
 # and a flag if they are "perfect" (sum of divisors equals the number)
-gen.data.frame(c(n, sumdiv, perfect = (n == sumdiv)), n = 2:20, 
+gen.data.frame(list(n, sumdiv, perfect = (n == sumdiv)), n = 2:20, 
                sumdiv = sum(gen.vector(x, x = 1:(n-1), n \%\% x == 0)))
+               
+# A diagonal matrix with (1, ..., 5) on the diagonal
+gen.matrix(if (i == j) i else 0, i = 1:5, j = 1:5)
 
 }
 \seealso{
-\code{\link{gen.list.expr}} to generate expressions to be evaluated later, 
-  \code{\link{gen.list.char}} to generate lists of characters, 
+\code{\link{gen.named.list}} to generate named structures, 
+  \code{\link{gen.list.expr}} to generate expressions to be evaluated later, 
+  \code{\link{gen.logical.and}} to generate logical and/or conditions,
   and \link{listcompr} for an overview of all list comprehension functions.
 }
