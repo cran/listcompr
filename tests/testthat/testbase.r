@@ -10,17 +10,24 @@ test_that("Trivial tests", {
   x <- 1
   expect_equal(gen.list(c(x, y), y = 2), list(c(1, 2)))
   expect_equal(gen.list(x, x = 2), list(2))
+  expect_equal(gen.list(a, a = 1, b = NULL), list(1))
 })
 
 
 test_that("Empty result tests", {
-  expect_warning(gen.vector(x + y, x = 1, y = 2:3, x > y), "no variable ranges detected, returning empty result")
-  expect_warning(gen.data.frame(c(a = 1, b = x), x = 2:3, x > 3), "no variable ranges detected, returning empty result")
+  expect_warning(gen.vector(x + y, x = 1, y = 2:3, x > y), "result is empty, conditions are too restrictive")
+  expect_warning(gen.data.frame(c(a = 1, b = x), x = 2:3, x > 3), "result is empty, conditions are too restrictive")
+  expect_warning(gen.list(a, a = NULL), "result is empty, variable range is NULL")
+  
+})
+
+test_that("Wrong parametrizations", {
+  expect_error(gen.list(x + y, y = x:2, x = 1:2), "could not evaluate variable range of 'y'")
+  expect_error(gen.list(a, a = list(1,2)), "unexpected value for variable 'a', expecting a vector of atomics")
 })
 
 test_that("Basic list and vector tests", {
   expect_equal(gen.list(x, x = 1:3), lapply(1:3, identity))
-  expect_error(gen.list(x + y, y = x:2, x = 1:2), "could not evaluate variable range of 'y'")
   
   y <- 1
   expect_equal(gen.vector(x + y, x = 1:3), 2:4)
@@ -99,10 +106,13 @@ test_that("Named lists/vectors/dataframes tests", {
   
   expect_equal(gen.named.list.expr("a_{i}", a_i, i = 1:5), quote(list(a_1 = a_1, a_2 = a_2, a_3 = a_3, a_4 = a_4, a_5 = a_5)))
   
-  expect_equal(gen.named.vector.expr("v{v_1}", v_1, v_ = 1:2), quote(c(v1 = 1L, v2 = 2L)))
+  expect_equal(gen.named.vector.expr(paste0("v", "{v_1}"), v_1, v_ = 1:2), quote(c(v1 = 1L, v2 = 2L)))
 
-  expect_equal(gen.data.frame(gen.named.vector.expr("a_{i}", a_i, i = 1:3), a_ = 1:2),
-               data.frame(a_1 = c(1L, 2L, 1L, 2L, 1L, 2L, 1L, 2L), a_2 = c(1L, 1L, 2L, 2L, 1L, 1L, 2L, 2L), a_3 = c(1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L)))
+  expect_equal(gen.data.frame(gen.named.vector.expr(paste0("x", "a_{i}"), a_i, i = 1:3), a_ = 1:2),
+               data.frame(xa_1 = c(1L, 2L, 1L, 2L, 1L, 2L, 1L, 2L), xa_2 = c(1L, 1L, 2L, 2L, 1L, 1L, 2L, 2L), xa_3 = c(1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L)))
+  
+  expect_equal(gen.data.frame(gen.named.list(paste0("x", "a_{i}"), a_i, i = 1:3), a_ = 1:2),
+               data.frame(xa_1 = c(1L, 2L, 1L, 2L, 1L, 2L, 1L, 2L), xa_2 = c(1L, 1L, 2L, 2L, 1L, 1L, 2L, 2L), xa_3 = c(1L, 1L, 1L, 1L, 2L, 2L, 2L, 2L)))
   
   expect_equal(gen.named.data.frame("col_{i}", 10 * i + c(a = 1, b = 2), i = 1:2),
                data.frame(a = c(11, 21), b = c(12, 22), row.names = c("col_1",  "col_2")))
@@ -128,6 +138,15 @@ test_that("Named lists/vectors/dataframes tests", {
   
   expect_equal(gen.data.frame(gen.named.list('a_{j}', j * i, j = 1:2), i = 1:3),
                data.frame(a_1 = 1:3, a_2 = c(2L, 4L, 6L)))
+
+  expect_equal(gen.named.data.frame("x{n}", gen.named.data.frame(paste0(a_1, ..., a_3), sum(a_1, ..., a_3, n)[1], a_ = 1:2, byrow = TRUE), n = 1:2),
+               structure(list("111" = 4:5, "211" = 5:6, "121" = 5:6, "221" = 6:7,      "112" = 5:6, "212" = 6:7, "122" = 6:7, "222" = 7:8), row.names = c("x1",  "x2"), class = "data.frame"))
+  
+  expect_equal(gen.data.frame(c(a, c), a = 1, c = 2),
+               structure(list(a = 1, c = 2), row.names = c(NA, -1L), class = "data.frame"))
+  
+  expect_equal(gen.data.frame(c(a = 1, a), a = 2),
+               structure(list(a = 1, V2 = 2), row.names = c(NA, -1L), class = "data.frame"))
 })
 
 test_that("three dots tests", {
